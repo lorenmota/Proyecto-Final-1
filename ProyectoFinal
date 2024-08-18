@@ -1,0 +1,147 @@
+const Url = "https://localhost:7189/api/Noticias";
+const UrlCat = "https://localhost:7189/api/Noticias/ByCategoria";
+const UrlPais = "https://localhost:7189/api/Noticias/ByPais";
+const containerNoticias = document.querySelector(".container-noticias");
+const inicio = document.querySelector('#logo');
+const searchForm = document.querySelector("#searchForm");
+const searchInput = document.querySelector("#searchInput");
+
+fetch(Url, {
+    method: 'GET',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    mode: 'cors',
+})
+    .then(response => response.json())
+    .then(data => displayNoticias(data.$values));
+
+function displayNoticias(noticias) {
+    
+    containerNoticias.innerHTML = '';
+
+    for (const noticia of noticias) {
+        const noticiaFragment = document.createRange().createContextualFragment(`
+            <div class="noticia-Container">
+                <img src="${noticia.portada}" alt="Portada de la noticia">
+                <div class="Noticia-info">
+                    <h2 class="noticia-titulo" data-id="${noticia.noticiaId}">${noticia.titulo}</h2>
+                </div>
+                <div class="noticia-descripcion">
+                    <span>${noticia.categoria} • ${noticia.fechaPublicacion}</span>
+                    <p>${noticia.descripcion}</p>
+                </div>
+            </div>
+        `);
+
+        containerNoticias.appendChild(noticiaFragment);
+    }
+}
+
+// busqueda por categoria 
+function SearchNoticias(categoria) {
+    const categoriaLowerCase = categoria.toLowerCase();
+    const Filtro = `${UrlCat}/${categoriaLowerCase}`;
+
+    fetch(Filtro, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+    })
+    .then(response => response.json())
+    .then(data => displayNoticias(data.$values));
+}
+
+//busqueda por pais
+function SearchNoticiasP(pais){
+    const paisToLower = pais.toLowerCase();
+    const Filtro = `${UrlPais}/${paisToLower}`;
+
+    fetch(Filtro, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+    })
+    .then(response => response.json())
+    .then(data => displayNoticias(data.$values));
+
+}
+function init() {
+    containerNoticias.innerHTML = '';
+    searchInput.value = "";
+    
+    fetch(Url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+    })
+    .then(response => response.json())
+    .then(data => displayNoticias(data.$values));
+}
+
+function noticiaDetails(id) {
+    const detalleUrl = `${Url}/${id}`;
+
+    fetch(detalleUrl, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+    })
+    .then(response => response.json())
+    .then(data => showDetails(data));
+}
+
+function showDetails(detalle) {
+
+    console.log('Detalles de la noticia:', detalle);
+
+    containerNoticias.innerHTML = '';
+
+    const detalles = `
+        <div class="detalle-noticia">
+            <h2 class="noticia-titulo">${detalle.titulo}</h2>
+            <img src="${detalle.portada}" alt="Portada de la noticia">
+            <div class="detalle-info">
+                <span>Por: ${detalle.autor}</span>
+                </br>
+                <span id="fecha">${detalle.categoria} • ${detalle.fechaPublicacion} • ${detalle.pais}</span>
+                <p>${detalle.contenido}</p>
+
+            </div>
+        </div>
+    `;
+
+    containerNoticias.innerHTML = detalles;
+}
+
+inicio.addEventListener("click", function () {
+    init();
+});
+
+searchForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    const searchTerm = searchInput.value;
+    SearchNoticias(searchTerm);
+});
+
+searchForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    const searchTerm = searchInput.value;
+    SearchNoticiasP(searchTerm);
+});
+
+document.addEventListener("click", function (event) {
+    if (event.target.classList.contains("noticia-titulo")) {
+        event.preventDefault();
+        const noticiaId = event.target.dataset.id;
+        noticiaDetails(noticiaId);
+    }
+});
