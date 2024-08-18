@@ -1,0 +1,152 @@
+// api.js - Archivo separado para manejar las llamadas a la API
+export const API_BASE_URL = "https://localhost:7189/api/Noticias";
+
+export const getNoticias = async () => {
+    try {
+        const response = await fetch(API_BASE_URL, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            mode: 'cors',
+        });
+        if (!response.ok) throw new Error('Error fetching noticias');
+        return await response.json();
+    } catch (error) {
+        console.error("Failed to fetch noticias:", error);
+        return null;
+    }
+};
+
+export const getNoticiasByFilter = async (filter, type) => {
+    const url = `${API_BASE_URL}/By${type}/${filter.toLowerCase()}`;
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            mode: 'cors',
+        });
+        if (!response.ok) throw new Error(`Error fetching noticias by ${type}`);
+        return await response.json();
+    } catch (error) {
+        console.error(`Failed to fetch noticias by ${type}:`, error);
+        return null;
+    }
+};
+
+export const getNoticiaDetails = async (id) => {
+    const url = `${API_BASE_URL}/${id}`;
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            mode: 'cors',
+        });
+        if (!response.ok) throw new Error('Error fetching noticia details');
+        return await response.json();
+    } catch (error) {
+        console.error("Failed to fetch noticia details:", error);
+        return null;
+    }
+};
+
+// main.js - Código principal
+import { getNoticias, getNoticiasByFilter, getNoticiaDetails } from './api.js';
+
+const containerNoticias = document.querySelector(".container-noticias");
+const searchForm = document.querySelector("#searchForm");
+const searchInput = document.querySelector("#searchInput");
+const spinner = document.querySelector(".spinner");
+
+const displayNoticias = (noticias) => {
+    containerNoticias.innerHTML = '';
+    if (!noticias || noticias.length === 0) {
+        containerNoticias.innerHTML = '<p>No se encontraron noticias.</p>';
+        return;
+    }
+
+    noticias.forEach(noticia => {
+        const categoriaClass = `categoria-${noticia.categoria.toLowerCase()}`;
+        const noticiaFragment = document.createRange().createContextualFragment(`
+            <div class="noticia-Container ${categoriaClass}">
+                <img src="${noticia.portada}" alt="Portada de la noticia">
+                <div class="Noticia-info">
+                    <h2 class="noticia-titulo" data-id="${noticia.noticiaId}">${noticia.titulo}</h2>
+                </div>
+                <div class="noticia-descripcion">
+                    <span>${noticia.categoria} • ${noticia.fechaPublicacion}</span>
+                    <p>${noticia.descripcion}</p>
+                </div>
+            </div>
+        `);
+        containerNoticias.appendChild(noticiaFragment);
+    });
+};
+
+const showLoading = () => {
+    spinner.style.display = 'block';
+};
+
+const hideLoading = () => {
+    spinner.style.display = 'none';
+};
+
+const init = async () => {
+    showLoading();
+    const data = await getNoticias();
+    hideLoading();
+    displayNoticias(data ? data.$values : []);
+};
+
+const handleSearch = async (searchTerm) => {
+    showLoading();
+    const [dataByCategory, dataByCountry] = await Promise.all([
+        getNoticiasByFilter(searchTerm, "Categoria"),
+        getNoticiasByFilter(searchTerm, "Pais"),
+    ]);
+    hideLoading();
+    const combinedResults = [...(dataByCategory?.$values || []), ...(dataByCountry?.$values || [])];
+    displayNoticias(combinedResults);
+};
+
+const handleNoticiaClick = async (id) => {
+    showLoading();
+    const detalle = await getNoticiaDetails(id);
+    hideLoading();
+    if (detalle) {
+        containerNoticias.innerHTML = `
+            <div class="detalle-noticia">
+                <h2 class="noticia-titulo">${detalle.titulo}</h2>
+                <img src="${detalle.portada}" alt="Portada de la noticia">
+                <div class="detalle-info">
+                    <span>Por: ${detalle.autor}</span>
+                    <br>
+                    <span id="fecha">${detalle.categoria} • ${detalle.fechaPublicacion} • ${detalle.pais}</span>
+                    <p>${detalle.contenido}</p>
+                </div>
+            </div>
+        `;
+    } else {
+        containerNoticias.innerHTML = '<p>Error cargando detalles de la noticia.</p>';
+    }
+};
+
+searchForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const searchTerm = searchInput.value.trim();
+    handleSearch(searchTerm);
+});
+
+document.addEventListener("click", (event) => {
+    if (event.target.classList.contains("noticia-titulo")) {
+        const noticiaId = event.target.dataset.id;
+        handleNoticiaClick(noticiaId);
+    }
+});
+
+// Inicializar la aplicación
+init();
