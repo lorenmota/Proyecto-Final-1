@@ -1,4 +1,4 @@
-// api.js - Archivo separado para manejar las llamadas a la API
+
 export const API_BASE_URL = "https://localhost:7189/api/Noticias";
 
 export const getNoticias = async () => {
